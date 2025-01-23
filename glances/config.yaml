@@ -1,10 +1,10 @@
 ---
-name: Glances
+name: ga_Glances
 version: dev
-slug: glances
+slug: ga_glances
 description: A cross-platform system monitoring tool
 url: https://github.com/hassio-addons/addon-glances
-codenotary: codenotary@frenck.dev
+codenotary: notary@greenautarky.com
 ingress: true
 ingress_port: 0
 ingress_stream: true
@@ -40,15 +40,15 @@ options:
   certfile: fullchain.pem
   keyfile: privkey.pem
   influxdb:
-    enabled: false
-    host: a0d7b954-influxdb
+    enabled: true
+    host: 8db5297b_ga_influxdbv1
     port: 8086
     interval: 60
     ssl: false
     version: 1
-    username: glances
-    password: ""
-    database: glances
+    username: ga_glances
+    password: ga_glances
+    database: ga_glances
     prefix: localhost
 schema:
   log_level: list(trace|debug|info|notice|warning|error|fatal)
