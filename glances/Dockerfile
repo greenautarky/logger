@@ -10,7 +10,7 @@ COPY requirements.txt /tmp/
 
 
 # Install smartmontools
-RUN apt-get update && apt-get install -y smartmontools
+RUN apk add --no-cache smartmontools
 
 # Setup base
 # hadolint ignore=DL3042

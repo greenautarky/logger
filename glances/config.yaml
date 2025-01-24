@@ -41,7 +41,7 @@ options:
   keyfile: privkey.pem
   influxdb:
     enabled: true
-    host: d730d661_ga_influxdbv1
+    host: localhost
     port: 8086
     interval: 60
     ssl: false
