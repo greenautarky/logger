@@ -20,6 +20,11 @@ zeroconf
 
 # https://github.com/nicolargo/glances/blob/develop/docker-requirements.txt
 
+pymdstat 
+podman 
+sparklines 
+pySMART
+
 python-dateutil
 six
 urllib3
