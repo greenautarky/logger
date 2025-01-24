@@ -8,6 +8,10 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # Copy Python requirements file
 COPY requirements.txt /tmp/
 
+
+# Install smartmontools
+RUN apt-get update && apt-get install -y smartmontools
+
 # Setup base
 # hadolint ignore=DL3042
 RUN \
