@@ -1,6 +1,6 @@
 ---
 name: ga_Glances
-version: 1.0
+version: 4.3.0.8
 slug: ga_glances
 description: A cross-platform system monitoring tool
 url: https://github.com/hassio-addons/addon-glances
@@ -41,7 +41,7 @@ options:
   keyfile: privkey.pem
   influxdb:
     enabled: true
-    host: 8db5297b_ga_influxdbv1
+    host: d730d661_ga_influxdbv1
     port: 8086
     interval: 60
     ssl: false

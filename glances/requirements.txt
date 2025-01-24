@@ -1,12 +1,35 @@
-bottle==0.13.2
-docker==7.1.0
 glances==4.3.0.8
-influxdb==5.3.2
-influxdb-client==1.48.0
-netifaces==0.11.0
-paho-mqtt==2.1.0
-psutil==6.1.1
-py-cpuinfo==9.0.0
-requests==2.32.3
-scandir==1.10.0
-zeroconf==0.141.0
+
+# https://github.com/nicolargo/glances/blob/develop/requirements.txt
+# Base Requirements 
+defusedxml
+packaging
+psutil>=5.6.7
+
+bottle
+docker>=6.1.1
+
+influxdb>=1.0.0 # For InfluxDB < 1.8
+influxdb-client # For InfluxDB >= 1.8
+netifaces
+paho-mqtt
+py-cpuinfo
+requests
+scandir
+zeroconf
+
+# https://github.com/nicolargo/glances/blob/develop/docker-requirements.txt
+
+python-dateutil
+six
+urllib3
+
+# https://github.com/nicolargo/glances/blob/develop/optional-requirements.txt
+netifaces2
+
+
+# https://github.com/nicolargo/glances/blob/develop/webui-requirements.txt
+fastapi>=0.82.0 # ReST API Framework
+jinja2 # Template engine
+orjson # JSON Serialization speedup
+uvicorn # Webserver
