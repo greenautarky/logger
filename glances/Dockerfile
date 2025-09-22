@@ -14,27 +14,25 @@ RUN apk add --no-cache smartmontools
 
 # Setup base
 # hadolint ignore=DL3042
-RUN \
-    apk add --no-cache --virtual .build-dependencies \
-        build-base=0.5-r3 \
-        py3-pip=24.3.1-r0 \
-        python3-dev=3.12.8-r1 \
-    \
+RUN apk upgrade --no-cache
+
+RUN apk add --no-cache --virtual .build-dependencies \
+        build-base \
+        py3-pip \
+        python3-dev \
     && apk add --no-cache \
-        nginx=1.26.2-r4 \
-        py3-packaging=24.2-r0 \
-        py3-six=1.16.0-r9 \
-        python3=3.12.8-r1 \
-    \
+        nginx \
+        py3-packaging \
+        py3-six \
+        python3 \
     && pip3 install -r /tmp/requirements.txt \
-    \
     && find /usr/local \
         \( -type d -a -name test -o -name tests -o -name '__pycache__' \) \
         -o \( -type f -a -name '*.pyc' -o -name '*.pyo' \) \
         -exec rm -rf '{}' + \
-    \
     && apk del --no-cache --purge .build-dependencies \
-    && rm -f -r /etc/nginx
+    && rm -rf /etc/nginx
+
 
 # Copy root filesystem
 COPY rootfs /
