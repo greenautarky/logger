@@ -15,6 +15,8 @@ RUN apk add --no-cache smartmontools
 # Setup base
 # hadolint ignore=DL3042
 RUN apk upgrade --no-cache
+# hadolint ignore=DL3042
+RUN apk update && apk upgrade --no-cache
 
 RUN apk add --no-cache --virtual .build-dependencies \
         build-base \
@@ -32,7 +34,6 @@ RUN apk add --no-cache --virtual .build-dependencies \
         -exec rm -rf '{}' + \
     && apk del --no-cache --purge .build-dependencies \
     && rm -rf /etc/nginx
-
 
 # Copy root filesystem
 COPY rootfs /
