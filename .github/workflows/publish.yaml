@@ -21,7 +21,7 @@ env:
   IMAGE_NS: ghcr.io/greenautarky
   ADDON_SLUG: ga_glances        # underscore kept as requested
   ADDON_DIR: glances
-  BASE_VERSION: 18.4.0          # single, no-`v` scheme for all arches
+  BASE_VERSION: 18.1.4          # single, no-`v` scheme for all arches
 
 jobs:
   build:
