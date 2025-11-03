@@ -1,7 +1,7 @@
 ---
-name: ga_log
+name: ga_logger
 version: 0.0.2
-slug: ga_log
+slug: ga_logger
 description: A cross-platform system monitoring tool
 url: https://github.com/hassio-addons/addon-glances
 codenotary: notary@greenautarky.com

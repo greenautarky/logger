@@ -42,6 +42,9 @@ RUN apk add --no-cache curl tar jq gettext ca-certificates libstdc++ libgcc; \
     install -m 0755 "${TG_BIN}" /usr/local/bin/telegraf; \
     rm -rf /tmp/telegraf.tgz /tmp/tg
 
+# RUN apk add --no-cache fluent-bit # (uncomment when fluent-bit is available in apk repo for your architecture)
+
+
 COPY --from=fluentbit /fluent-bit/bin/fluent-bit /usr/bin/fluent-bit
 
 COPY rootfs /
