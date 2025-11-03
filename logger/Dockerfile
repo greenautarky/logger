@@ -55,9 +55,6 @@ RUN set -eux; \
   install -m 0755 "${TG_BIN}" /usr/local/bin/telegraf; \
   rm -rf /tmp/telegraf.tgz /tmp/tg
 
-# Copy Fluent Bit from stage
-COPY --from=fluentbit /fluent-bit/bin/fluent-bit /usr/local/bin/
-
 # ----- Add-on rootfs -----
 COPY rootfs /
 RUN chmod +x /run.sh
