@@ -127,3 +127,4 @@ SOFTWARE.
 [releases-shield]: https://img.shields.io/github/release/hassio-addons/addon-glances.svg
 [releases]: https://github.com/hassio-addons/addon-glances/releases
 [repository]: https://github.com/hassio-addons/repository
+# logger
