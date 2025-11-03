@@ -1,11 +1,11 @@
-name: Build & Push (GHCR) - ga_log
+name: Build & Push (GHCR) - ga_logger
 
 on:
   push:
     branches: [ main ]
     tags: ['*']                 # allow tag-triggered releases
     paths:
-      - "log/**"
+      - "logger/**"
       - ".github/workflows/publish.yml"
   workflow_dispatch:
 
@@ -19,7 +19,7 @@ permissions:
 
 env:
   IMAGE_NS: ghcr.io/greenautarky
-  ADDON_SLUG: ga_log        
+  ADDON_SLUG: ga_logger
   ADDON_DIR: logger
   BASE_VERSION: 18.1.4          # single, no-`v` scheme for all arches
 
