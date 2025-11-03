@@ -1,20 +1,18 @@
 # Set shell
-#SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+#SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ARG BUILD_FROM=ghcr.io/hassio-addons/base:17.1.0
 FROM ${BUILD_FROM}
 
 ARG TARGETARCH
 ARG BUILD_ARCH
-ARG FB_VERSION=4.0.13         # (optional) newer FB; keep 3.0.7 if you prefer
-ARG TELEGRAF_VERSION=1.36.3   # example; pin what you tested
+ARG FB_VERSION=3.0.7
+ARG TELEGRAF_VERSION=1.31.3
 
 ENV LD_LIBRARY_PATH="/usr/local/lib:${LD_LIBRARY_PATH}"
 
 RUN set -eux; \
   apk add --no-cache curl tar jq gettext ca-certificates libstdc++ libgcc; \
-  \
-  # Prefer TARGETARCH from buildx; fall back to HA BUILD_ARCH
   ARCH="${TARGETARCH:-$BUILD_ARCH}"; \
   case "$ARCH" in \
     amd64|x86_64)   FB_ARCH="x86_64";  TG_ARCH="amd64" ;; \
@@ -22,29 +20,21 @@ RUN set -eux; \
     arm|armv7)      FB_ARCH="armv7";   TG_ARCH="armhf" ;; \
     *) echo "Unsupported arch: ${ARCH}" && exit 1 ;; \
   esac; \
-  \
-  # ---- Fluent Bit ----
   FB_URL="https://github.com/fluent/fluent-bit/releases/download/v${FB_VERSION}/fluent-bit-${FB_VERSION}-linux-${FB_ARCH}.tar.gz"; \
   curl -fsSL "$FB_URL" | tar -xz -C /tmp; \
   mv /tmp/fluent-bit-${FB_VERSION}-linux-${FB_ARCH}/bin/* /usr/local/bin/; \
-  # plugins & libs (best-effort, some releases don't ship libs separately)
   if [ -d "/tmp/fluent-bit-${FB_VERSION}-linux-${FB_ARCH}/lib" ]; then \
     mv /tmp/fluent-bit-${FB_VERSION}-linux-${FB_ARCH}/lib/* /usr/local/lib/; \
   fi; \
   rm -rf /tmp/fluent-bit-*; \
-  \
-  # ---- Telegraf ----  (note linux_* uses armhf for 32-bit ARM)
   TG_URL="https://dl.influxdata.com/telegraf/releases/telegraf-${TELEGRAF_VERSION}_linux_${TG_ARCH}.tar.gz"; \
   curl -fsSL "$TG_URL" | tar -xz -C /tmp; \
   mv /tmp/telegraf-${TELEGRAF_VERSION}/usr/bin/telegraf /usr/local/bin/; \
   rm -rf /tmp/telegraf-${TELEGRAF_VERSION}
 
-# Copy root filesystem
 COPY rootfs /
 RUN chmod +x /run.sh
 
-# This add-on runs on the host pid namespace, making it impossible
-# to use S6-Overlay. Therefore the init system is disabled at this point.
 ENTRYPOINT []
 CMD ["/run.sh"]
 
