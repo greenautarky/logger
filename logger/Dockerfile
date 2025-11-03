@@ -3,7 +3,7 @@
 ARG BUILD_FROM=ghcr.io/hassio-addons/base:17.1.0
 ARG FB_TAG
 
-FROM fluent/fluent-bit:${FB_TAG} AS fluentbit
+FROM fluent/fluent-bit:4.0.13-arm-v7 AS fluentbit
 
 FROM ${BUILD_FROM}
 
