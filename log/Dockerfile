@@ -5,12 +5,6 @@ FROM ${BUILD_FROM}
 # Set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# Copy Python requirements file
-COPY requirements.txt /tmp/
-
-
-# Install smartmontools
-RUN apk add --no-cache smartmontools
 
 # Setup base
 # hadolint ignore=DL3042
@@ -18,25 +12,14 @@ RUN apk upgrade --no-cache
 # hadolint ignore=DL3042
 RUN apk update && apk upgrade --no-cache
 
-RUN apk add --no-cache --virtual .build-dependencies \
-        build-base \
-        py3-pip \
-        python3-dev \
-    && apk add --no-cache \
-        nginx \
-        py3-packaging \
-        py3-six \
-        python3 \
-    && pip3 install -r /tmp/requirements.txt \
-    && find /usr/local \
-        \( -type d -a -name test -o -name tests -o -name '__pycache__' \) \
-        -o \( -type f -a -name '*.pyc' -o -name '*.pyo' \) \
-        -exec rm -rf '{}' + \
-    && apk del --no-cache --purge .build-dependencies \
-    && rm -rf /etc/nginx
+
+# Install Fluent Bit,Telegraf + helpers (jq, envsubst)
+RUN apk add --no-cache fluent-bit telegraf jq gettext
+
 
 # Copy root filesystem
 COPY rootfs /
+RUN chmod +x /run.sh
 
 # This add-on runs on the host pid namespace, making it impossible
 # to use S6-Overlay. Therefore the init system is disabled at this point.
@@ -59,11 +42,11 @@ LABEL \
     io.hass.arch="${BUILD_ARCH}" \
     io.hass.type="addon" \
     io.hass.version=${BUILD_VERSION} \
-    maintainer="Franck Nijhof <frenck@addons.community>" \
+    maintainer="Thomas Taube " \
     org.opencontainers.image.title="${BUILD_NAME}" \
     org.opencontainers.image.description="${BUILD_DESCRIPTION}" \
-    org.opencontainers.image.vendor="Home Assistant Community Add-ons" \
-    org.opencontainers.image.authors="Franck Nijhof <frenck@addons.community>" \
+    org.opencontainers.image.vendor="Home Assistant Community Log Add-ons" \
+    org.opencontainers.image.authors="Thomas Taube " \
     org.opencontainers.image.licenses="MIT" \
     org.opencontainers.image.url="https://addons.community" \
     org.opencontainers.image.source="https://github.com/${BUILD_REPOSITORY}" \

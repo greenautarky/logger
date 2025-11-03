@@ -1,0 +1,39 @@
+---
+name: ga_log
+version: 0.0.1
+slug: ga_log
+description: A cross-platform system monitoring tool
+url: https://github.com/hassio-addons/addon-glances
+codenotary: notary@greenautarky.com
+ingress: false
+ingress_port: 0
+ingress_stream: false
+panel_icon: mdi:speedometer
+startup: services
+homeassistant: "2024.12.0"
+arch:
+  - aarch64
+  - amd64
+  - armv7
+ports:
+  80/tcp: null
+ports_description:
+  80/tcp: Web interface (Not required for Ingress)
+map:
+  - addons
+  - backup
+  - config:rw
+  - share
+  - ssl
+  - media
+init: false # disable s6 init system
+hassio_api: true
+auth_api: true
+docker_api: true
+host_network: false #tbd
+host_pid: true
+apparmor: false
+options: {}
+schema: {}
+environment:
+  LOG_FORMAT: "{LEVEL}: {MESSAGE}"

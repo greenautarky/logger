@@ -1,11 +1,11 @@
-name: Build & Push (GHCR) - ga_glances
+name: Build & Push (GHCR) - ga_log
 
 on:
   push:
     branches: [ main ]
     tags: ['*']                 # allow tag-triggered releases
     paths:
-      - "glances/**"
+      - "log/**"
       - ".github/workflows/publish.yml"
   workflow_dispatch:
 
@@ -19,8 +19,8 @@ permissions:
 
 env:
   IMAGE_NS: ghcr.io/greenautarky
-  ADDON_SLUG: ga_glances        # underscore kept as requested
-  ADDON_DIR: glances
+  ADDON_SLUG: ga_log        
+  ADDON_DIR: logger
   BASE_VERSION: 18.1.4          # single, no-`v` scheme for all arches
 
 jobs:
@@ -54,7 +54,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Read add-on version from glances/config.yaml (supports quoted/unquoted, ignores comments)
+      # Read add-on version from logger/config.yaml (supports quoted/unquoted, ignores comments)
       - name: Read add-on version
         id: ver
         shell: bash
