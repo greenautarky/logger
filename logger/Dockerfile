@@ -4,10 +4,6 @@
 # syntax=docker/dockerfile:1.6
 
 ARG BUILD_FROM=ghcr.io/hassio-addons/base:17.1.0
-FROM ${BUILD_FROM}
-
-# Use ash like the HA base; fail early on errors
-SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
 # ----- Build args -----
 # Provided by HA builder / your build.yaml
@@ -25,6 +21,24 @@ ARG BUILD_REF
 ARG BUILD_REPOSITORY
 ARG BUILD_VERSION
 
+# Compute FB Docker tag based on arch (must be before fluentbit FROM)
+ARG FB_TAG
+RUN ARCH="${TARGETARCH:-$BUILD_ARCH}"; \
+    case "$ARCH" in \
+      amd64|x86_64) FB_TAG="${FB_VERSION}" ;; \
+      arm64|aarch64) FB_TAG="${FB_VERSION}-arm64" ;; \
+      arm|armv7) FB_TAG="${FB_VERSION}-arm-v7" ;; \
+      *) echo "Unsupported arch: ${ARCH}" >&2; exit 1 ;; \
+    esac; \
+    echo "FB_TAG=${FB_TAG}"
+
+FROM fluent/fluent-bit:${FB_TAG} AS fluentbit
+
+FROM ${BUILD_FROM}
+
+# Use ash like the HA base; fail early on errors
+SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
+
 # Needed for Fluent Bit plugins on Alpine and to silence linter warnings
 ENV LD_LIBRARY_PATH="/usr/local/lib"
 
@@ -35,25 +49,12 @@ RUN set -eux; \
   # Prefer TARGETARCH (buildx) and fall back to HA's BUILD_ARCH
   ARCH="${TARGETARCH:-$BUILD_ARCH}"; \
   case "$ARCH" in \
-    amd64|x86_64)   FB_ARCH="x86_64";  TG_ARCH="amd64" ;; \
-    arm64|aarch64)  FB_ARCH="aarch64"; TG_ARCH="arm64" ;; \
-    arm|armv7)      FB_ARCH="armv7";   TG_ARCH="armhf" ;; \
+    amd64|x86_64)   TG_ARCH="amd64" ;; \
+    arm64|aarch64)  TG_ARCH="arm64" ;; \
+    arm|armv7)      TG_ARCH="armhf" ;; \
     *) echo "Unsupported arch: ${ARCH}" >&2; exit 1 ;; \
   esac; \
-  echo "Resolved ARCH=${ARCH} -> FB_ARCH=${FB_ARCH}, TG_ARCH=${TG_ARCH}"; \
-  \
-  # -------- Fluent Bit --------
-  FB_URL="https://github.com/fluent/fluent-bit/releases/download/v${FB_VERSION}/fluent-bit-${FB_VERSION}-linux-${FB_ARCH}.tar.gz"; \
-  echo "Downloading Fluent Bit: ${FB_URL}"; \
-  curl -fL --retry 3 --retry-delay 2 -o /tmp/fluent-bit.tgz "${FB_URL}"; \
-  tar -tzf /tmp/fluent-bit.tgz >/dev/null; \
-  mkdir -p /tmp/fb && tar -xzf /tmp/fluent-bit.tgz -C /tmp/fb; \
-  FB_DIR="/tmp/fb/fluent-bit-${FB_VERSION}-linux-${FB_ARCH}"; \
-  test -x "${FB_DIR}/bin/fluent-bit"; \
-  install -m 0755 "${FB_DIR}/bin/fluent-bit" /usr/local/bin/; \
-  # copy plugins/libs if present
-  if [ -d "${FB_DIR}/lib" ]; then cp -a "${FB_DIR}/lib/." /usr/local/lib/; fi; \
-  rm -rf /tmp/fluent-bit.tgz /tmp/fb; \
+  echo "Resolved ARCH=${ARCH} -> TG_ARCH=${TG_ARCH}"; \
   \
   # -------- Telegraf --------
   TG_URL="https://dl.influxdata.com/telegraf/releases/telegraf-${TELEGRAF_VERSION}_linux_${TG_ARCH}.tar.gz"; \
@@ -65,6 +66,10 @@ RUN set -eux; \
   test -x "${TG_BIN}"; \
   install -m 0755 "${TG_BIN}" /usr/local/bin/telegraf; \
   rm -rf /tmp/telegraf.tgz /tmp/tg
+
+# Copy Fluent Bit from stage
+COPY --from=fluentbit /fluent-bit/bin/fluent-bit /usr/local/bin/
+COPY --from=fluentbit /fluent-bit/lib/ /usr/local/lib/
 
 # ----- Add-on rootfs -----
 COPY rootfs /
