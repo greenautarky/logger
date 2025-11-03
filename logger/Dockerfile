@@ -1,6 +1,3 @@
-# Set shell
-
-#SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # syntax=docker/dockerfile:1.6
 
 ARG BUILD_FROM=ghcr.io/hassio-addons/base:17.1.0
@@ -13,7 +10,6 @@ SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 # Provided by HA builder / your build.yaml
 ARG TARGETARCH
 ARG BUILD_ARCH
-ARG FB_VERSION=4.0.13         # set in build.yaml args (can override there)
 ARG TELEGRAF_VERSION=1.36.3   # set in build.yaml args (can override there)
 
 # Optional HA builder metadata (if present they’ll be used for labels)
@@ -25,14 +21,13 @@ ARG BUILD_REF
 ARG BUILD_REPOSITORY
 ARG BUILD_VERSION
 
-FROM fluent/fluent-bit:${FB_VERSION} AS fluentbit
-
 # Needed for Fluent Bit plugins on Alpine and to silence linter warnings
 ENV LD_LIBRARY_PATH="/usr/local/lib"
 
 # ----- Packages + binaries -----
 RUN set -eux; \
   apk add --no-cache curl tar jq gettext ca-certificates libstdc++ libgcc; \
+  apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing fluent-bit; \
   \
   # Prefer TARGETARCH (buildx) and fall back to HA's BUILD_ARCH
   ARCH="${TARGETARCH:-$BUILD_ARCH}"; \
