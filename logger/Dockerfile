@@ -1,25 +1,38 @@
 # Set shell
 
 #SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+# syntax=docker/dockerfile:1.6
 
 ARG BUILD_FROM=ghcr.io/hassio-addons/base:17.1.0
 FROM ${BUILD_FROM}
 
-# Make /bin/ash strict
+# Use ash like the HA base; fail early on errors
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
+# ----- Build args -----
+# Provided by HA builder / your build.yaml
 ARG TARGETARCH
 ARG BUILD_ARCH
-ARG FB_VERSION=3.0.7        # keep your pinned versions
-ARG TELEGRAF_VERSION=1.31.3
+ARG FB_VERSION=4.0.13         # set in build.yaml args (can override there)
+ARG TELEGRAF_VERSION=1.36.3   # set in build.yaml args (can override there)
 
-# Ensure libstdc++ for fluent-bit; define LD_LIBRARY_PATH to avoid warnings
+# Optional HA builder metadata (if present they’ll be used for labels)
+ARG BUILD_ARCH
+ARG BUILD_DATE
+ARG BUILD_DESCRIPTION
+ARG BUILD_NAME
+ARG BUILD_REF
+ARG BUILD_REPOSITORY
+ARG BUILD_VERSION
+
+# Needed for Fluent Bit plugins on Alpine and to silence linter warnings
 ENV LD_LIBRARY_PATH="/usr/local/lib"
 
+# ----- Packages + binaries -----
 RUN set -eux; \
   apk add --no-cache curl tar jq gettext ca-certificates libstdc++ libgcc; \
   \
-  # Determine arch (prefer TARGETARCH from buildx, fallback to HA BUILD_ARCH)
+  # Prefer TARGETARCH (buildx) and fall back to HA's BUILD_ARCH
   ARCH="${TARGETARCH:-$BUILD_ARCH}"; \
   case "$ARCH" in \
     amd64|x86_64)   FB_ARCH="x86_64";  TG_ARCH="amd64" ;; \
@@ -31,60 +44,51 @@ RUN set -eux; \
   \
   # -------- Fluent Bit --------
   FB_URL="https://github.com/fluent/fluent-bit/releases/download/v${FB_VERSION}/fluent-bit-${FB_VERSION}-linux-${FB_ARCH}.tar.gz"; \
-  echo "Downloading Fluent Bit from: ${FB_URL}"; \
+  echo "Downloading Fluent Bit: ${FB_URL}"; \
   curl -fL --retry 3 --retry-delay 2 -o /tmp/fluent-bit.tgz "${FB_URL}"; \
   tar -tzf /tmp/fluent-bit.tgz >/dev/null; \
   mkdir -p /tmp/fb && tar -xzf /tmp/fluent-bit.tgz -C /tmp/fb; \
   FB_DIR="/tmp/fb/fluent-bit-${FB_VERSION}-linux-${FB_ARCH}"; \
   test -x "${FB_DIR}/bin/fluent-bit"; \
-  mv "${FB_DIR}/bin/"* /usr/local/bin/; \
-  if [ -d "${FB_DIR}/lib" ]; then mv "${FB_DIR}/lib/"* /usr/local/lib/; fi; \
+  install -m 0755 "${FB_DIR}/bin/fluent-bit" /usr/local/bin/; \
+  # copy plugins/libs if present
+  if [ -d "${FB_DIR}/lib" ]; then cp -a "${FB_DIR}/lib/." /usr/local/lib/; fi; \
   rm -rf /tmp/fluent-bit.tgz /tmp/fb; \
   \
   # -------- Telegraf --------
   TG_URL="https://dl.influxdata.com/telegraf/releases/telegraf-${TELEGRAF_VERSION}_linux_${TG_ARCH}.tar.gz"; \
-  echo "Downloading Telegraf from: ${TG_URL}"; \
+  echo "Downloading Telegraf: ${TG_URL}"; \
   curl -fL --retry 3 --retry-delay 2 -o /tmp/telegraf.tgz "${TG_URL}"; \
   tar -tzf /tmp/telegraf.tgz >/dev/null; \
   mkdir -p /tmp/tg && tar -xzf /tmp/telegraf.tgz -C /tmp/tg; \
-  # Influx tarball structure: telegraf-<ver>/usr/bin/telegraf
   TG_BIN="$(find /tmp/tg -type f -path '*/usr/bin/telegraf' | head -n1)"; \
   test -x "${TG_BIN}"; \
-  mv "${TG_BIN}" /usr/local/bin/telegraf; \
+  install -m 0755 "${TG_BIN}" /usr/local/bin/telegraf; \
   rm -rf /tmp/telegraf.tgz /tmp/tg
 
-
+# ----- Add-on rootfs -----
 COPY rootfs /
 RUN chmod +x /run.sh
 
+# This add-on runs in host PID namespace; disable s6 init
 ENTRYPOINT []
 CMD ["/run.sh"]
 
-# Build arguments
-ARG BUILD_ARCH
-ARG BUILD_DATE
-ARG BUILD_DESCRIPTION
-ARG BUILD_NAME
-ARG BUILD_REF
-ARG BUILD_REPOSITORY
-ARG BUILD_VERSION
-
-# Labels
+# ----- Labels (optional but nice) -----
 LABEL \
-    io.hass.name="${BUILD_NAME}" \
-    io.hass.description="${BUILD_DESCRIPTION}" \
-    io.hass.arch="${BUILD_ARCH}" \
-    io.hass.type="addon" \
-    io.hass.version=${BUILD_VERSION} \
-    maintainer="Thomas Taube " \
-    org.opencontainers.image.title="${BUILD_NAME}" \
-    org.opencontainers.image.description="${BUILD_DESCRIPTION}" \
-    org.opencontainers.image.vendor="Home Assistant Community Log Add-ons" \
-    org.opencontainers.image.authors="Thomas Taube " \
-    org.opencontainers.image.licenses="MIT" \
-    org.opencontainers.image.url="https://addons.community" \
-    org.opencontainers.image.source="https://github.com/${BUILD_REPOSITORY}" \
-    org.opencontainers.image.documentation="https://github.com/${BUILD_REPOSITORY}/blob/main/README.md" \
-    org.opencontainers.image.created=${BUILD_DATE} \
-    org.opencontainers.image.revision=${BUILD_REF} \
-    org.opencontainers.image.version=${BUILD_VERSION}
+  io.hass.name="${BUILD_NAME}" \
+  io.hass.description="${BUILD_DESCRIPTION}" \
+  io.hass.arch="${BUILD_ARCH}" \
+  io.hass.type="addon" \
+  io.hass.version="${BUILD_VERSION}" \
+  maintainer="Thomas Taube" \
+  org.opencontainers.image.title="${BUILD_NAME}" \
+  org.opencontainers.image.description="${BUILD_DESCRIPTION}" \
+  org.opencontainers.image.vendor="Greenautarky" \
+  org.opencontainers.image.authors="Thomas Taube" \
+  org.opencontainers.image.url="https://github.com/${BUILD_REPOSITORY}" \
+  org.opencontainers.image.source="https://github.com/${BUILD_REPOSITORY}" \
+  org.opencontainers.image.documentation="https://github.com/${BUILD_REPOSITORY}/blob/main/README.md" \
+  org.opencontainers.image.created="${BUILD_DATE}" \
+  org.opencontainers.image.revision="${BUILD_REF}" \
+  org.opencontainers.image.version="${BUILD_VERSION}"

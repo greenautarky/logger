@@ -6,3 +6,8 @@ build_from:
 codenotary:
   base_image: codenotary@frenck.dev
   signer: codenotary@frenck.dev
+
+# Build args passed into your Dockerfile (same for all arches)
+args:
+  FB_VERSION: "4.0.13"      # Fluent Bit version (has x86_64/aarch64/armv7 tarballs)
+  TELEGRAF_VERSION: "1.36.3" # Telegraf version (has linux_amd64/arm64/armhf)
