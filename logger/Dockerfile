@@ -4,12 +4,20 @@
 # syntax=docker/dockerfile:1.6
 
 ARG BUILD_FROM=ghcr.io/hassio-addons/base:17.1.0
+ARG FB_VERSION=3.2.1         # Update to a valid version that supports multi-arch
+
+ARG FB_TAG=${FB_VERSION}
+FROM fluent/fluent-bit:${FB_TAG} AS fluentbit
+
+FROM ${BUILD_FROM}
+
+# Use ash like the HA base; fail early on errors
+SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
 # ----- Build args -----
 # Provided by HA builder / your build.yaml
 ARG TARGETARCH
 ARG BUILD_ARCH
-ARG FB_VERSION=4.0.13         # set in build.yaml args (can override there)
 ARG TELEGRAF_VERSION=1.36.3   # set in build.yaml args (can override there)
 
 # Optional HA builder metadata (if present they’ll be used for labels)
@@ -20,24 +28,6 @@ ARG BUILD_NAME
 ARG BUILD_REF
 ARG BUILD_REPOSITORY
 ARG BUILD_VERSION
-
-# Compute FB Docker tag based on arch (must be before fluentbit FROM)
-ARG FB_TAG
-RUN ARCH="${TARGETARCH:-$BUILD_ARCH}"; \
-    case "$ARCH" in \
-      amd64|x86_64) FB_TAG="${FB_VERSION}" ;; \
-      arm64|aarch64) FB_TAG="${FB_VERSION}-arm64" ;; \
-      arm|armv7) FB_TAG="${FB_VERSION}-arm-v7" ;; \
-      *) echo "Unsupported arch: ${ARCH}" >&2; exit 1 ;; \
-    esac; \
-    echo "FB_TAG=${FB_TAG}"
-
-FROM fluent/fluent-bit:${FB_TAG} AS fluentbit
-
-FROM ${BUILD_FROM}
-
-# Use ash like the HA base; fail early on errors
-SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
 # Needed for Fluent Bit plugins on Alpine and to silence linter warnings
 ENV LD_LIBRARY_PATH="/usr/local/lib"
