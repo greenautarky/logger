@@ -3,18 +3,33 @@ ARG BUILD_FROM=ghcr.io/hassio-addons/base:17.1.0
 FROM ${BUILD_FROM}
 
 # Set shell
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+#SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 
-# Setup base
-# hadolint ignore=DL3042
-RUN apk upgrade --no-cache
-# hadolint ignore=DL3042
-RUN apk update && apk upgrade --no-cache
+ARG TARGETARCH
+ARG FB_VERSION=3.0.7          # pin versions you trust
+ARG TELEGRAF_VERSION=1.31.3
 
-
-# Install Fluent Bit,Telegraf + helpers (jq, envsubst)
-RUN apk add --no-cache fluent-bit telegraf jq gettext
+RUN set -eux; \
+  apk add --no-cache curl tar jq gettext ca-certificates; \
+  # Map Docker arch -> vendor asset names
+  case "$TARGETARCH" in \
+    amd64)  FB_ARCH="x86_64";   TG_ARCH="amd64" ;; \
+    arm64)  FB_ARCH="aarch64";  TG_ARCH="arm64" ;; \
+    arm)    FB_ARCH="armv7";    TG_ARCH="armv7" ;; \
+    *) echo "Unsupported arch: $TARGETARCH" && exit 1 ;; \
+  esac; \
+  # ---- Fluent Bit ----
+  FB_URL="https://github.com/fluent/fluent-bit/releases/download/v${FB_VERSION}/fluent-bit-${FB_VERSION}-linux-${FB_ARCH}.tar.gz"; \
+  curl -fsSL "$FB_URL" | tar -xz -C /tmp; \
+  mv /tmp/fluent-bit-${FB_VERSION}-linux-${FB_ARCH}/bin/* /usr/local/bin/; \
+  mv /tmp/fluent-bit-${FB_VERSION}-linux-${FB_ARCH}/lib/* /usr/local/lib/ || true; \
+  rm -rf /tmp/fluent-bit-*; \
+  # ---- Telegraf ----
+  TG_URL="https://dl.influxdata.com/telegraf/releases/telegraf-${TELEGRAF_VERSION}_linux_${TG_ARCH}.tar.gz"; \
+  curl -fsSL "$TG_URL" | tar -xz -C /tmp; \
+  mv /tmp/telegraf-${TELEGRAF_VERSION}/usr/bin/telegraf /usr/local/bin/; \
+  rm -rf /tmp/telegraf-${TELEGRAF_VERSION}
 
 
 # Copy root filesystem
