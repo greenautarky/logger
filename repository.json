@@ -1,5 +1,5 @@
 {
-  "name": "GA_Home Assistant Add-on: glances",
-  "url": "https://github.com/greenautarky/glances",
+  "name": "GA_Home Assistant Add-on: logger",
+  "url": "https://github.com/greenautarky/logger",
   "maintainer": "GA>"
 }
