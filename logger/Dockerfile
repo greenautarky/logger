@@ -1,6 +1,7 @@
-# syntax=docker/dockerfile:1.6
-ARG BUILD_FROM=ghcr.io/hassio-addons/debian-base/armv7:6.0.0
+ARG BUILD_FROM
+# hadolint ignore=DL3006
 FROM ${BUILD_FROM}
+
 
 SHELL ["/bin/sh","-ec"]
 
