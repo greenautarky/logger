@@ -1,16 +1,10 @@
 # syntax=docker/dockerfile:1.6
-
-# Point to Debian base from config.yaml (per-arch). This default is just a fallback.
 ARG BUILD_FROM=ghcr.io/hassio-addons/debian-base/armv7:6.0.0
-ARG TELEGRAF_VERSION=1.36.3
-
-# Final image (Debian-based HA add-on base)
 FROM ${BUILD_FROM}
 
-# Use /bin/sh on Debian base (no ash here)
-SHELL ["/bin/sh", "-ec"]
+SHELL ["/bin/sh","-ec"]
 
-# Common labels args from HA builder
+# HA builder args (left as-is)
 ARG TARGETARCH
 ARG BUILD_ARCH
 ARG BUILD_DATE
@@ -19,14 +13,14 @@ ARG BUILD_NAME
 ARG BUILD_REF
 ARG BUILD_REPOSITORY
 ARG BUILD_VERSION
+ARG TELEGRAF_VERSION=1.36.3
 
 ENV LD_LIBRARY_PATH="/usr/local/lib"
 
-# ---- Install tools and Fluent Bit (glibc) ----
-# Add Fluent Bit official APT repo, then install fluent-bit (armv7 => armhf)
+# --- Tools + Fluent Bit (glibc) ---
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
-      ca-certificates curl jq gettext-base gnupg tar \
+      ca-certificates curl jq gettext-base gnupg tar findutils \
  && curl -fsSL https://packages.fluentbit.io/fluentbit.key \
     | gpg --dearmor -o /usr/share/keyrings/fluentbit.gpg \
  && echo "deb [signed-by=/usr/share/keyrings/fluentbit.gpg] https://packages.fluentbit.io/debian/bookworm bookworm main" \
@@ -35,8 +29,7 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends fluent-bit \
  && rm -rf /var/lib/apt/lists/*
 
-# ---- Install Telegraf (portable tarball) ----
-# Map Docker arch to Influx tarball arch names
+# --- Telegraf (tarball, arch-mapped) ---
 RUN ARCH="${TARGETARCH:-$BUILD_ARCH}"; \
     case "$ARCH" in \
       amd64|x86_64)   TG_ARCH="amd64" ;; \
@@ -54,14 +47,14 @@ RUN ARCH="${TARGETARCH:-$BUILD_ARCH}"; \
     install -m0755 "${TG_BIN}" /usr/local/bin/telegraf; \
     rm -rf /tmp/telegraf.tgz /tmp/tg
 
-# Your filesystem overlay and entry
+# Your overlay (configs, s6 services, etc.)
 COPY rootfs /
-RUN chmod +x /run.sh
 
-# For add-ons you usually let s6 handle services; but if you're testing, this is fine:
-ENTRYPOINT []
-CMD ["/run.sh"]
-
+# IMPORTANT: do NOT override entrypoint/cmd — keep s6 from the base image
+# (If you had ENTRYPOINT [] / CMD ["/run.sh"], remove them.)
+# The add-on should start services via s6 (e.g., /etc/s6-overlay/s6-rc.d/<svc>/run)
+# If you currently start via /run.sh, migrate that to s6 longruns.
+  
 # Labels
 LABEL \
   io.hass.name="${BUILD_NAME}" \
