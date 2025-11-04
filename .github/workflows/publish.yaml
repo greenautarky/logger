@@ -103,13 +103,25 @@ jobs:
         id: base
         shell: bash
         run: |
-          img="ghcr.io/hassio-addons/debian-base/${{ matrix.ha_arch }}:${{ env.BASE_VERSION }}"
-          # armv7 uses an explicit path segment; keep consistent
-          if [ "${{ matrix.ha_arch }}" = "armv7" ]; then
-            img="ghcr.io/hassio-addons/debian-base/armv7:${{ env.BASE_VERSION }}"
-          fi
-          echo "img=$img" >> "$GITHUB_OUTPUT"
-          echo "Using base: $img"
+            # Prefer the image from build.yaml (source-of-truth) if present
+            f="${{ env.ADDON_DIR }}/build.yaml"
+            if [ -f "$f" ]; then
+              img=$(grep -E "^[[:space:]]*${{ matrix.ha_arch }}:" "$f" | head -n1 | sed -E 's/^[[:space:]]*[^:]+:[[:space:]]*//') || true
+              if [ -n "${img:-}" ]; then
+                echo "Using base from $f: $img"
+                echo "img=$img" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+            fi
+
+            # Fallback: use the conventional base image path
+            img="ghcr.io/hassio-addons/debian-base/${{ matrix.ha_arch }}:${{ env.BASE_VERSION }}"
+            # armv7 uses an explicit path segment; keep consistent
+            if [ "${{ matrix.ha_arch }}" = "armv7" ]; then
+              img="ghcr.io/hassio-addons/debian-base/armv7:${{ env.BASE_VERSION }}"
+            fi
+            echo "img=$img" >> "$GITHUB_OUTPUT"
+            echo "Using base: $img"
 
       - name: Build & Push (${{ matrix.ha_arch }})
         uses: docker/build-push-action@v6
