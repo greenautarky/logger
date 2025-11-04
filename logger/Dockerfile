@@ -15,6 +15,7 @@ ARG BUILD_REF
 ARG BUILD_REPOSITORY
 ARG BUILD_VERSION
 ARG TELEGRAF_VERSION=1.36.3
+ARG FB_VERSION=4.0.13
 
 ENV LD_LIBRARY_PATH="/usr/local/lib"
 
@@ -27,7 +28,27 @@ RUN apt-get update \
  && echo "deb [signed-by=/usr/share/keyrings/fluentbit.gpg] https://packages.fluentbit.io/debian/bookworm bookworm main" \
     > /etc/apt/sources.list.d/fluent-bit.list \
  && apt-get update \
- && apt-get install -y --no-install-recommends fluent-bit \
+ && (apt-get install -y --no-install-recommends fluent-bit || true) \
+ && if [ ! -x /usr/bin/fluent-bit ]; then \
+      ARCH="${TARGETARCH:-$BUILD_ARCH}"; \
+      case "$ARCH" in \
+        amd64|x86_64) FB_ARCH="amd64" ;; \
+        arm64|aarch64) FB_ARCH="arm64" ;; \
+        arm|armv7) FB_ARCH="armhf" ;; \
+        *) echo "Unsupported arch for fluent-bit: $ARCH" >&2; exit 1 ;; \
+      esac; \
+      FB_URL="https://github.com/fluent/fluent-bit/releases/download/v${FB_VERSION}/fluent-bit-${FB_VERSION}-linux-${FB_ARCH}.tar.gz"; \
+      echo "Attempting to download Fluent Bit from: ${FB_URL}"; \
+      curl -fL --retry 3 -o /tmp/fluent-bit.tgz "${FB_URL}" || (echo "Could not download fluent-bit tarball for ${FB_ARCH}" >&2; exit 1); \
+      mkdir -p /tmp/fb && tar -xzf /tmp/fluent-bit.tgz -C /tmp/fb; \
+      FB_BIN="$(find /tmp/fb -type f -name fluent-bit | head -n1)"; \
+      if [ -x "${FB_BIN}" ]; then \
+        install -m0755 "${FB_BIN}" /usr/bin/fluent-bit; \
+      else \
+        echo "Fluent Bit binary not found in tarball" >&2; exit 1; \
+      fi; \
+      rm -rf /tmp/fluent-bit.tgz /tmp/fb; \
+    fi \
  && rm -rf /var/lib/apt/lists/*
 
 # --- Telegraf (tarball, arch-mapped) ---
