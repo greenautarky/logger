@@ -103,16 +103,21 @@ jobs:
         id: base
         shell: bash
         run: |
-            # Prefer the image from build.yaml (source-of-truth) if present
-            f="${{ env.ADDON_DIR }}/build.yaml"
-            if [ -f "$f" ]; then
-              img=$(grep -E "^[[:space:]]*${{ matrix.ha_arch }}:" "$f" | head -n1 | sed -E 's/^[[:space:]]*[^:]+:[[:space:]]*//') || true
-              if [ -n "${img:-}" ]; then
-                echo "Using base from $f: $img"
-                echo "img=$img" >> "$GITHUB_OUTPUT"
-                exit 0
+            # Prefer the image from build.yaml (source-of-truth) if present.
+            # Try: ${ADDON_DIR}/build.yaml then ${ADDON_DIR}/logger/build.yaml (one-level nested).
+            f1="${{ env.ADDON_DIR }}/build.yaml"
+            f2="${{ env.ADDON_DIR }}/logger/build.yaml"
+
+            for f in "$f1" "$f2"; do
+              if [ -f "$f" ]; then
+                img=$(grep -E "^[[:space:]]*${{ matrix.ha_arch }}:" "$f" | head -n1 | sed -E 's/^[[:space:]]*[^:]+:[[:space:]]*//') || true
+                if [ -n "${img:-}" ]; then
+                  echo "Using base from $f: $img"
+                  echo "img=$img" >> "$GITHUB_OUTPUT"
+                  exit 0
+                fi
               fi
-            fi
+            done
 
             # Fallback: use the conventional base image path
             img="ghcr.io/hassio-addons/debian-base/${{ matrix.ha_arch }}:${{ env.BASE_VERSION }}"
