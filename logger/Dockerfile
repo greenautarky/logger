@@ -37,17 +37,26 @@ RUN apt-get update \
         arm|armv7) FB_ARCH="armhf" ;; \
         *) echo "Unsupported arch for fluent-bit: $ARCH" >&2; exit 1 ;; \
       esac; \
-      FB_URL="https://github.com/fluent/fluent-bit/releases/download/v${FB_VERSION}/fluent-bit-${FB_VERSION}-linux-${FB_ARCH}.tar.gz"; \
-      echo "Attempting to download Fluent Bit from: ${FB_URL}"; \
-      curl -fL --retry 3 -o /tmp/fluent-bit.tgz "${FB_URL}" || (echo "Could not download fluent-bit tarball for ${FB_ARCH}" >&2; exit 1); \
-      mkdir -p /tmp/fb && tar -xzf /tmp/fluent-bit.tgz -C /tmp/fb; \
-      FB_BIN="$(find /tmp/fb -type f -name fluent-bit | head -n1)"; \
-      if [ -x "${FB_BIN}" ]; then \
-        install -m0755 "${FB_BIN}" /usr/bin/fluent-bit; \
-      else \
-        echo "Fluent Bit binary not found in tarball" >&2; exit 1; \
+      # Try several common release asset name patterns to find a matching tarball
+      tried=0; success=0; \
+      for suf in "${FB_ARCH}" "x86_64" "aarch64" "armv7" "armhf"; do \
+        FB_URL="https://github.com/fluent/fluent-bit/releases/download/v${FB_VERSION}/fluent-bit-${FB_VERSION}-linux-${suf}.tar.gz"; \
+        echo "Attempting to download Fluent Bit from: ${FB_URL}"; \
+        if curl -fL --retry 2 -o /tmp/fluent-bit.tgz "${FB_URL}"; then \
+          mkdir -p /tmp/fb && tar -xzf /tmp/fluent-bit.tgz -C /tmp/fb; \
+          FB_BIN="$(find /tmp/fb -type f -name fluent-bit | head -n1)"; \
+          if [ -x "${FB_BIN}" ]; then \
+            install -m0755 "${FB_BIN}" /usr/bin/fluent-bit; \
+            success=1; rm -rf /tmp/fluent-bit.tgz /tmp/fb; break; \
+          else \
+            rm -rf /tmp/fluent-bit.tgz /tmp/fb; \
+          fi; \
+        fi; \
+        tried=$((tried+1)); \
+      done; \
+      if [ "$success" -ne 1 ]; then \
+        echo "Could not find a suitable Fluent Bit tarball for ${FB_VERSION} (tried $tried patterns)" >&2; exit 1; \
       fi; \
-      rm -rf /tmp/fluent-bit.tgz /tmp/fb; \
     fi \
  && rm -rf /var/lib/apt/lists/*
 
