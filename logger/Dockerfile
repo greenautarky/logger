@@ -1,7 +1,9 @@
+
+
+# Use the base image provided by the workflow (should be Alpine for all arches)
 ARG BUILD_FROM
 # hadolint ignore=DL3006
 FROM ${BUILD_FROM}
-
 
 SHELL ["/bin/sh","-ec"]
 
@@ -17,48 +19,30 @@ ARG BUILD_VERSION
 ARG TELEGRAF_VERSION=1.36.3
 ARG FB_VERSION=4.0.13
 
+
+
 ENV LD_LIBRARY_PATH="/usr/local/lib"
 
-# --- Tools + Fluent Bit (glibc) ---
-RUN apt-get update \
- && apt-get install -y --no-install-recommends \
-      ca-certificates curl jq gettext-base gnupg tar findutils \
- && curl -fsSL https://packages.fluentbit.io/fluentbit.key \
-    | gpg --dearmor -o /usr/share/keyrings/fluentbit.gpg \
- && echo "deb [signed-by=/usr/share/keyrings/fluentbit.gpg] https://packages.fluentbit.io/debian/bookworm bookworm main" \
-    > /etc/apt/sources.list.d/fluent-bit.list \
- && apt-get update \
- && (apt-get install -y --no-install-recommends fluent-bit || true) \
- && if [ ! -x /usr/bin/fluent-bit ]; then \
-      ARCH="${TARGETARCH:-$BUILD_ARCH}"; \
-      case "$ARCH" in \
-        amd64|x86_64) FB_ARCH="amd64" ;; \
-        arm64|aarch64) FB_ARCH="arm64" ;; \
-        arm|armv7) FB_ARCH="armhf" ;; \
-        *) echo "Unsupported arch for fluent-bit: $ARCH" >&2; exit 1 ;; \
-      esac; \
-      # Try several common release asset name patterns to find a matching tarball
-      tried=0; success=0; \
-      for suf in "${FB_ARCH}" "x86_64" "aarch64" "armv7" "armhf"; do \
-        FB_URL="https://github.com/fluent/fluent-bit/releases/download/v${FB_VERSION}/fluent-bit-${FB_VERSION}-linux-${suf}.tar.gz"; \
-        echo "Attempting to download Fluent Bit from: ${FB_URL}"; \
-        if curl -fL --retry 2 -o /tmp/fluent-bit.tgz "${FB_URL}"; then \
-          mkdir -p /tmp/fb && tar -xzf /tmp/fluent-bit.tgz -C /tmp/fb; \
-          FB_BIN="$(find /tmp/fb -type f -name fluent-bit | head -n1)"; \
-          if [ -x "${FB_BIN}" ]; then \
-            install -m0755 "${FB_BIN}" /usr/bin/fluent-bit; \
-            success=1; rm -rf /tmp/fluent-bit.tgz /tmp/fb; break; \
-          else \
-            rm -rf /tmp/fluent-bit.tgz /tmp/fb; \
-          fi; \
-        fi; \
-        tried=$((tried+1)); \
-      done; \
-      if [ "$success" -ne 1 ]; then \
-        echo "Could not find a suitable Fluent Bit tarball for ${FB_VERSION} (tried $tried patterns)" >&2; exit 1; \
-      fi; \
-    fi \
- && rm -rf /var/lib/apt/lists/*
+# --- Tools + Fluent Bit (Alpine/musl, minimal) ---
+RUN apk add --no-cache ca-certificates curl jq tar
+
+# Install Fluent Bit (musl, minimal, dynamic) for Alpine
+RUN ARCH="${TARGETARCH:-$BUILD_ARCH}"; \
+    case "$ARCH" in \
+      amd64|x86_64)   FB_ARCH="x86_64" ;; \
+      arm64|aarch64)  FB_ARCH="aarch64" ;; \
+      arm|armv7)      FB_ARCH="armv7" ;; \
+      *) echo "Unsupported arch: ${ARCH}" >&2; exit 1 ;; \
+    esac; \
+    FB_URL="https://github.com/fluent/fluent-bit/releases/download/v${FB_VERSION}/fluent-bit-${FB_VERSION}-linux-${FB_ARCH}.tar.gz"; \
+    echo "Downloading Fluent Bit: ${FB_URL}"; \
+    curl -fL --retry 3 --retry-delay 2 -o /tmp/fluent-bit.tgz "${FB_URL}"; \
+    tar -tzf /tmp/fluent-bit.tgz >/dev/null; \
+    mkdir -p /tmp/fb && tar -xzf /tmp/fluent-bit.tgz -C /tmp/fb; \
+    FB_BIN="$(find /tmp/fb -type f -name fluent-bit | head -n1)"; \
+    test -x "${FB_BIN}"; \
+    install -m0755 "${FB_BIN}" /usr/bin/fluent-bit; \
+    rm -rf /tmp/fluent-bit.tgz /tmp/fb
 
 # --- Telegraf (tarball, arch-mapped) ---
 RUN ARCH="${TARGETARCH:-$BUILD_ARCH}"; \
